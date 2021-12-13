@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs')
 const router = express.Router()
 const User = require('../users/users-model')
 const { checkUsernameFree, checkUsernameExists, checkPasswordLength } = require('./auth-middleware')
-
+const session = require("express-session");
 
 
 
