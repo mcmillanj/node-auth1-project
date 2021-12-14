@@ -6,15 +6,15 @@ const router = require("express").Router();
 
 
 
-router.get('/', restricted, (req, res) => {
+router.get('/', restricted, async (req, res,next) => {
   console.log('getting all users')
-  User.find()
-    .then(users => {
-      res.status(200).json(users)
-    })
-    .catch(err => {
-      res.status(401).json({ message: 'You shall not pass!' })
-    })
+  try {
+  const users = await User.find()
+        res.json(users)
+    
+  } catch(error) {
+    next(error)
+  }
 })
 
 module.exports = router; 

@@ -10,7 +10,7 @@ const User = require('../users/users-model')
     "message": "You shall not pass!"
   }
 */
-const restricted=(req, res, next)=> {
+function restricted (req, res, next) {
   if ( req.session.user) {
     next()
   } else {
@@ -28,19 +28,39 @@ const restricted=(req, res, next)=> {
   }
 */
  async function checkUsernameFree(req, res, next) {
-  User.findBy(req.body)
-    .then(response => {
-      if (response.length) {
-        res.status(422).json({ message: 'Username taken' })
+
+
+  try {
+     const users = await User.findBy({username:req.body.username})
+     if(!users.length) {
+     next()
+  }
+       else {
+         next({"message": "Username taken",status:422})
       }
-      else {
-        next()
-      }
-    })
-    .catch(err => {
-      res.status(500).json({ message: err.message })
-    })
+  } catch (err) {
+    next(err)
+  }
 }
+
+
+
+
+
+  
+//   User.findBy(req.body)
+//     .then(response => {
+//       if (response.length) {
+//         res.status(422).json({ message: 'Username taken' })
+//       }
+//       else {
+//         next()
+//       }
+//     })
+//     .catch(err => {
+//       res.status(500).json({ message: err.message })
+//     })
+// }
 
 /*
   If the username in req.body does NOT exist in the database
@@ -52,15 +72,15 @@ const restricted=(req, res, next)=> {
 */
 async function checkUsernameExists(req, res, next) {
   try {
-    const rows = await User.findBy({ username: req.body.username })
-    if (rows.length) {
-      req.userData = rows[0]
+    const users = await User.findBy({ username: req.body.username })
+    if (users.length) {
+     req.user = users[0]
       next()
     } else {
-      res.status(401).json("Invalid Credentials")
+     next({ message: "Invalid Credentials", status:401})
     }
-  } catch (e) {
-    res.status(500).json(`Server error: ${e.message}`)
+  } catch (err) {
+    next(err)
   }
 }
 /*
@@ -72,18 +92,16 @@ async function checkUsernameExists(req, res, next) {
   }
 */
 function checkPasswordLength(req, res, next) {
-  try {
-    if(!req.body.password || req.body.password.length <= 3) {
-      res.status(422).json({
-        message: 'Password must be longer than 3 chars'
-      });
+ 
+    if(!req.body.password || req.body.password.length <  3) {
+      next({message: 'Password must be longer than 3 chars',status: 422})
+      
     } else {
       next();
     }
-  } catch(err) {
-    res.status(500).json(`Server error: ${err}`);
-  }
+  
 }
+
 
 
 // Don't forget to add these to the `exports` object so they can be required in other modules

@@ -4,23 +4,26 @@ const express = require('express')
 const bcrypt = require('bcryptjs')
 const router = express.Router()
 const User = require('../users/users-model')
-const { checkUsernameFree, checkUsernameExists, checkPasswordLength } = require('./auth-middleware')
-const session = require("express-session");
+const {
+   checkPasswordLength,
+   checkUsernameExists,
+   checkUsernameFree,
+    } = require('./auth-middleware')
 
 
 
 
-router.post('/register', checkUsernameFree, checkPasswordLength, (req, res) => {
-  const hash = bcrypt.hashSync(req.body.password, 10)
-  User.add({ username: req.body.username, password: hash })
-    .then(response => {
-      res.status(201).json(response)
-    })
-    .catch(err => {
-      res.status(422).json({ message: 'username taken' })
-    })
+router.post('/register',  checkPasswordLength,checkUsernameFree, (req, res,next) => {
+const {username, password} = req.body
+const hash = bcrypt.hashSync(password, 8);
+
+
+User.add({username, password:hash})
+.then (saved => {
+  res.status(201).json(saved)
 })
-
+ .catch(next)
+})
 //   const credentials = req.body;
 //   const hash = bcrypt.hashSync(credentials.password, 14);
 //   credentials.password = hash;
@@ -58,22 +61,31 @@ router.post('/register', checkUsernameFree, checkPasswordLength, (req, res) => {
   }
  */
 
-  router.post('/login', checkUsernameExists, (req, res) => {
-    console.log('login post route')
-    try {
-      const verified = bcrypt.compareSync(req.body.password, req.userData.password)
-      if (verified) {
-        req.session.user = req.userData
-        res.status(200).json({ message: `Welcome ${req.userData.username}` })
-        // res.json(`Welcome back ${req.userData.username}`)
-        //res.json(`Welcome back ${req.session.user.username}`)
-      } else {
-        res.status(401).json({ message: "Invalid Credentials" })
-      }
-    } catch (e) {
-      res.status(500).json({ message: "Invalid Credentials" })
-    }
+  router.post('/login', checkUsernameExists, (req, res,next) => {
+    const { password } = req.body
+   if(bcrypt.compareSync(password, req.user.password))
+   {
+     //make it so that the cookie is set on the client
+     //make it so server stores a session with a session id
+     req.session.user = req.user
+     res.json({messenger: `Welcome ${req.user.username}` })
+   }else{
+     next({status: 401, message:'invalid credentials'})
+   }
   })
+
+  //   try {
+  //     const verified = bcrypt.compareSync(req.body.password, req.userData.password)
+  //     if (verified) {
+  //       req.session.user = req.userData
+  //       res.status(200).json({ message: `Welcome ${req.userData.username}` })
+  //     }else{
+  //       res.status(401).json({ message: "Invalid Credentials" })
+  //     }
+  //   } catch (e) {
+  //     res.status(500).json({ message: "Invalid Credentials" })
+  //   }
+  // })
 /**
   2 [POST] /api/auth/login { "username": "sue", "password": "1234" }
 
@@ -106,18 +118,20 @@ router.post('/register', checkUsernameFree, checkPasswordLength, (req, res) => {
     "message": "no session"
   }
  */
-  router.get('/logout', (req, res) => {
+  router.get('/logout', (req, res,next) => {
    
-    if (req.session) {
+    if (req.session.user) {
       req.session.destroy(err => {
         if (err) {
-          res.json(`Can't log out:${err.message}`)//
-        } else {
-          res.status(200).json({ message: 'no session' })//no session
+          next(err)
+        }else {
+          
+          res.json({ message: 'logged out' })//no session
         }
+        
       })
     } else {
-      res.status(200).json({ message: "no seesion" }) //logged out
+      res.json({ message: "no session" }) //logged out
     }
   
   })
